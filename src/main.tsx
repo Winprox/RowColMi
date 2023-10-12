@@ -1,19 +1,19 @@
-import { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { ButtonHTMLAttributes, FC, Fragment, InputHTMLAttributes, useCallback, useEffect, useMemo, useState } from 'react'; // prettier-ignore
 import { createRoot } from 'react-dom/client';
 import { useFilePicker } from 'use-file-picker';
 import './app.css';
 
-const FILES = ['row', 'col', 'mi'];
+const FILES = ['col', 'row', 'mi'];
 
 const App = () => {
   const [dataDivider, setDataDivider] = useState('\n');
+  const [reverseCompare, setReverseCompare] = useState(false);
+  const [minMax, setMinMax] = useState<number[][]>(
+    Array.from({ length: FILES.length - 1 }).map((_, i) => (i === 0 ? [0, 112] : [113, 453]))
+  );
+
   const [data, setData] = useState<number[][]>(Array.from({ length: FILES.length }).map(() => []));
   const [result, setResult] = useState<number[][]>([]);
-
-  const [firstMin, setFirstMin] = useState(0);
-  const [firstMax, setFirstMax] = useState(112);
-  const [secondMin, setSecondMin] = useState(113);
-  const [secondMax, setSecondMax] = useState(453);
 
   const dataExists = useMemo(() => data.find((v) => v.length), [data]);
   const dataValid = useMemo(() => data.every((v) => v.every((n) => isFinite(n))), [data]);
@@ -30,9 +30,9 @@ const App = () => {
     }
 
     rows = rows.filter((v) => {
-      const validByDirectOrder = between(v[0], firstMin, firstMax) && between(v[1], secondMin, secondMax);
-      const validByReverseOrder = between(v[0], secondMin, secondMax) && between(v[1], firstMin, firstMax);
-      return validByDirectOrder || validByReverseOrder;
+      const compare = v.every((v, i) => (i < minMax.length ? between(v, minMax[i][0], minMax[i][1]) : true));
+      const hardcodeCompare = between(v[0], minMax[1][0], minMax[1][1]) && between(v[1], minMax[0][0], minMax[0][1]);
+      return compare || (reverseCompare && hardcodeCompare);
     });
 
     setResult(
@@ -44,42 +44,55 @@ const App = () => {
         Array.from({ length: FILES.length }).map(() => [])
       )
     );
-  }, [data, dataExists, dataValid, dataLengthEqual, firstMin, firstMax, secondMin, secondMax]);
+  }, [dataExists, dataValid, dataLengthEqual, data, reverseCompare, minMax]);
 
   const downloadResult = useCallback(() => {
     result.forEach((v, i) => downloadData(v.join(dataDivider), FILES[i]));
   }, [result, dataDivider]);
 
   return (
-    <div
-      className={[
-        'flex h-screen w-screen select-none flex-col items-start gap-4 p-4',
-        'bg-neutral-800 text-neutral-200 [&_button]:transition-all',
-        '[&_button]:rounded-md [&_button]:border-[1px] [&_button]:px-1',
-        '[&_button:hover]:bg-neutral-200 [&_button:hover]:text-neutral-800',
-        '[&_input]:bg-neutral-800 [&_input]:px-1 [&_input]:outline-none',
-        '[&_input]:w-20 [&_input]:rounded-md [&_input]:border-[1px]'
-      ].join(' ')}
-    >
+    <div className='flex h-screen w-screen select-none flex-col items-start gap-4 bg-neutral-800 p-4 text-neutral-200'>
       <div className='flex gap-2'>
         Divider
-        <input
+        <Input
           defaultValue={JSON.stringify(dataDivider)}
           onChange={(e) => setDataDivider(JSON.parse(e.target.value))}
         />
       </div>
-      <div className='flex gap-2'>
-        1st Between
-        <input type='number' defaultValue={firstMin} onChange={(e) => setFirstMin(+e.target.value)} />
-        –
-        <input type='number' defaultValue={firstMax} onChange={(e) => setFirstMax(+e.target.value)} />
-      </div>
-      <div className='flex gap-2'>
-        2nd Between
-        <input type='number' defaultValue={secondMin} onChange={(e) => setSecondMin(+e.target.value)} />
-        –
-        <input type='number' defaultValue={secondMax} onChange={(e) => setSecondMax(+e.target.value)} />
-      </div>
+      {FILES.map((v, i) => (
+        <Fragment key={v}>
+          {i < minMax.length && (
+            <div className='flex gap-2'>
+              {`${v.toUpperCase()} Between`}
+              <Input
+                type='number'
+                defaultValue={minMax[i][0]}
+                onChange={(e) =>
+                  setMinMax((v) => {
+                    v[i][0] = +e.target.value;
+                    return v;
+                  })
+                }
+              />
+              –
+              <Input
+                type='number'
+                defaultValue={minMax[i][1]}
+                onChange={(e) =>
+                  setMinMax((v) => {
+                    v[i][1] = +e.target.value;
+                    return [...v];
+                  })
+                }
+              />
+            </div>
+          )}
+        </Fragment>
+      ))}
+      <label className='flex cursor-pointer gap-2'>
+        <input type='checkbox' defaultChecked={reverseCompare} onChange={(e) => setReverseCompare(e.target.checked)} />
+        Reverse Compare
+      </label>
       <div className='text-blue-600'>Comparisons Are Non Inclusive</div>
       <div className='flex gap-2'>
         <div className='flex flex-col items-end gap-4'>
@@ -104,19 +117,33 @@ const App = () => {
         </div>
       </div>
       <div className='text-red-600'>
-        {!dataExists && 'No Data'}
-        {!dataLengthEqual && 'Arrays Not Equal'}
-        {!dataValid && 'Data Not Valid'}
+        {!dataExists && <div>No Data</div>}
+        {!dataLengthEqual && <div>Arrays Not Equal</div>}
+        {!dataValid && <div>Data Not Valid</div>}
       </div>
       {result.length > 0 && (
         <div className='flex gap-2'>
-          <button onClick={downloadResult}>Download RESULT</button>
+          <Button onClick={downloadResult}>Download RESULT</Button>
           {`✅ ${result[0].length} Entries`}
         </div>
       )}
     </div>
   );
 };
+
+const Input: FC<InputHTMLAttributes<HTMLInputElement>> = ({ className, ...p }) => (
+  <input className={['w-20 rounded-md border-[1px] bg-neutral-800 px-1 outline-none', className].join(' ')} {...p} />
+);
+
+const Button: FC<ButtonHTMLAttributes<HTMLButtonElement>> = ({ className, ...p }) => (
+  <button
+    className={[
+      'rounded-md border-[1px] px-1 transition-all hover:bg-neutral-200 hover:text-neutral-800',
+      className
+    ].join(' ')}
+    {...p}
+  />
+);
 
 const Picker: FC<{ title: string; dataDivider: string; onData: (data: number[]) => void }> = ({
   title,
@@ -128,9 +155,10 @@ const Picker: FC<{ title: string; dataDivider: string; onData: (data: number[]) 
   useEffect(() => {
     const content = picker.filesContent[0]?.content;
     if (content) onData(content.split(dataDivider).map((v) => +v));
-  }, [picker.filesContent, dataDivider, onData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picker.filesContent, dataDivider]);
 
-  return <button onClick={picker.openFilePicker}>{`Upload ${title}`}</button>;
+  return <Button onClick={picker.openFilePicker}>{`Upload ${title}`}</Button>;
 };
 
 const between = (v: number, min: number, max: number) => v > min && v < max;
