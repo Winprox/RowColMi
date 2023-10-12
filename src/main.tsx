@@ -89,7 +89,7 @@ const App = () => {
           )}
         </Fragment>
       ))}
-      <label className='flex cursor-pointer gap-2'>
+      <label className='flex cursor-pointer items-center gap-2'>
         <input type='checkbox' defaultChecked={reverseCompare} onChange={(e) => setReverseCompare(e.target.checked)} />
         Reverse Compare
       </label>
@@ -112,7 +112,7 @@ const App = () => {
         </div>
         <div className='flex flex-col gap-4 [&_div]:h-[1.65rem]'>
           {FILES.map((v, i) => (
-            <div key={v}>{data[i]?.length > 0 ? `✅ ${data[i].length} Entries` : '❌'}</div>
+            <div key={v}>{data[i]?.length > 0 ? `✅ ${data[i].length} Entries` : ''}</div>
           ))}
         </div>
       </div>
