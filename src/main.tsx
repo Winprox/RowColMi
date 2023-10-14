@@ -8,7 +8,7 @@ const FILES = ['col', 'row', 'mi'];
 const App = () => {
   const [dataDivider, setDataDivider] = useState('\n');
   const [reverseCompare, setReverseCompare] = useState(false);
-  const [minMax, setMinMax] = useState<number[][]>(
+  const [minMax, setMinMax] = useState(
     Array.from({ length: FILES.length - 1 }).map((_, i) => (i === 0 ? [0, 112] : [113, 453]))
   );
 
@@ -51,7 +51,7 @@ const App = () => {
   }, [result, dataDivider]);
 
   return (
-    <div className='flex h-screen w-screen select-none flex-col items-start gap-4 bg-neutral-800 p-4 text-neutral-200'>
+    <div className='flex h-screen w-screen select-none flex-col items-start gap-4 overflow-y-auto bg-neutral-800 p-4 text-neutral-200'>
       <div className='flex gap-2'>
         Divider
         <Input
@@ -70,7 +70,7 @@ const App = () => {
                 onChange={(e) =>
                   setMinMax((v) => {
                     v[i][0] = +e.target.value;
-                    return v;
+                    return [...v];
                   })
                 }
               />
@@ -93,7 +93,7 @@ const App = () => {
         <input type='checkbox' defaultChecked={reverseCompare} onChange={(e) => setReverseCompare(e.target.checked)} />
         Reverse Compare
       </label>
-      <div className='text-blue-600'>Comparisons Are Non Inclusive</div>
+      <div className='text-blue-600'>Comparisons Are Inclusive</div>
       <div className='flex gap-2'>
         <div className='flex flex-col items-end gap-4'>
           {FILES.map((v, i) => (
@@ -161,7 +161,7 @@ const Picker: FC<{ title: string; dataDivider: string; onData: (data: number[]) 
   return <Button onClick={picker.openFilePicker}>{`Upload ${title}`}</Button>;
 };
 
-const between = (v: number, min: number, max: number) => v > min && v < max;
+const between = (v: number, min: number, max: number) => v >= min && v <= max;
 const downloadData = (data: string, fileName: string) => {
   const el = document.createElement('a');
   const file = new Blob([data], { type: 'text/plain' });
